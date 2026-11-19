@@ -42,11 +42,18 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Include XGBoost and LightGBM (requires extra extended)",
     )
+    parser.add_argument(
+        "--model-out", type=Path, help="Save the fitted model selected by CV"
+    )
     args = parser.parse_args(argv)
     optuna.logging.set_verbosity(optuna.logging.WARNING)
     try:
         result = run_benchmark(
-            args.data, trials=args.trials, jobs=args.jobs, extended=args.extended
+            args.data,
+            trials=args.trials,
+            jobs=args.jobs,
+            extended=args.extended,
+            model_out=args.model_out,
         )
     except (OSError, ValueError) as error:
         parser.error(str(error))

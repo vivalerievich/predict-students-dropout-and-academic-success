@@ -1,7 +1,9 @@
 """Run and evaluate the enrollment-time benchmark."""
 
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
+from joblib import dump
 from sklearn.metrics import (
     balanced_accuracy_score,
     classification_report,
@@ -19,8 +21,15 @@ from student_outcomes.models import DEFAULT_TRIALS, fit_models
 
 
 def run_benchmark(
-    path: Path, *, trials: int = DEFAULT_TRIALS, jobs: int = 1, extended: bool = False
+    path: Path,
+    *,
+    trials: int = DEFAULT_TRIALS,
+    jobs: int = 1,
+    extended: bool = False,
+    model_out: Path | None = None,
 ) -> dict:
+    if model_out is not None and model_out.resolve() == path.resolve():
+        raise ValueError("--model-out must differ from the training CSV path")
     train, holdout = split_dataset(load_dataset(path))
     train_features, train_targets = extract_inputs(train)
     holdout_features, holdout_targets = extract_inputs(holdout)
@@ -55,10 +64,18 @@ def run_benchmark(
                 holdout_targets, predictions, labels=class_codes
             ).tolist(),
         }
+    selected_model = next(iter(models))
+    if model_out is not None:
+        model_out.parent.mkdir(parents=True, exist_ok=True)
+        with TemporaryDirectory(dir=model_out.parent) as directory:
+            staged_model = Path(directory) / model_out.name
+            dump(models[selected_model].estimator, staged_model, compress=3)
+            staged_model.replace(model_out)
+
     return {
         "train_rows": len(train),
         "holdout_rows": len(holdout),
         "class_order": CLASS_ORDER,
-        "selected_model": next(iter(models)),
+        "selected_model": selected_model,
         "results": results,
     }

@@ -14,6 +14,7 @@ from student_outcomes.data import (
     split_dataset,
 )
 from student_outcomes.models import make_pipeline
+from student_outcomes.predict import main as predict
 
 
 @pytest.fixture
@@ -71,8 +72,22 @@ def test_pipeline_handles_unknown_category_and_missing_grade(dataset_path):
     assert model.predict(new_student)[0] in {0, 1, 2}
 
 
-def test_cli_trains_and_reports_metrics_from_local_csv(dataset_path, capsys):
-    main(["--data", str(dataset_path), "--trials", "1", "--jobs", "1"])
+def test_cli_reports_metrics_and_predicts_with_saved_model(
+    dataset_path, tmp_path, capsys
+):
+    model_path = tmp_path / "artifacts" / "model.joblib"
+    main(
+        [
+            "--data",
+            str(dataset_path),
+            "--trials",
+            "1",
+            "--jobs",
+            "1",
+            "--model-out",
+            str(model_path),
+        ]
+    )
     report = json.loads(capsys.readouterr().out)
 
     assert report["train_rows"] == 48
@@ -93,3 +108,15 @@ def test_cli_trains_and_reports_metrics_from_local_csv(dataset_path, capsys):
         sum(map(sum, result["holdout_confusion_matrix"])) == 12
         for result in results.values()
     )
+
+    features, _ = extract_inputs(load_dataset(dataset_path))
+    demo_path = tmp_path / "enrollment.csv"
+    features.iloc[:1].to_csv(demo_path, sep=";", index=False)
+    predict(["--model", str(model_path), "--data", str(demo_path)])
+    predictions = json.loads(capsys.readouterr().out)
+
+    assert len(predictions) == 1
+    probabilities = predictions[0]["probabilities"]
+    assert list(probabilities) == list(CLASS_ORDER)
+    assert sum(probabilities.values()) == pytest.approx(1.0)
+    assert predictions[0]["prediction"] == max(probabilities, key=probabilities.get)

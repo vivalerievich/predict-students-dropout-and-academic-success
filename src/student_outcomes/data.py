@@ -41,16 +41,29 @@ CATEGORICAL_FEATURES = tuple(
 )
 
 
-def load_dataset(path: Path) -> pd.DataFrame:
-    """Read the official UCI archive's semicolon-separated CSV."""
+def _read_csv(path: Path, required_columns: tuple[str, ...]) -> pd.DataFrame:
     data = pd.read_csv(path, sep=";", encoding="utf-8-sig")
     data.columns = data.columns.str.strip()
-    missing = sorted(set((*ENROLLMENT_FEATURES, TARGET)) - set(data.columns))
+    missing = sorted(set(required_columns) - set(data.columns))
     if missing:
         raise ValueError(f"Missing columns: {', '.join(missing)}")
+    return data
+
+
+def load_dataset(path: Path) -> pd.DataFrame:
+    """Read the official UCI archive's semicolon-separated CSV."""
+    data = _read_csv(path, (*ENROLLMENT_FEATURES, TARGET))
     if data[TARGET].isna().any() or set(data[TARGET]) != set(CLASS_ORDER):
         raise ValueError(f"{TARGET} must contain all three UCI outcome labels")
     return data
+
+
+def load_prediction_features(path: Path) -> pd.DataFrame:
+    """Read enrollment features from a semicolon-separated prediction CSV."""
+    data = _read_csv(path, ENROLLMENT_FEATURES)
+    if data.empty:
+        raise ValueError("Prediction CSV must contain at least one student")
+    return data.loc[:, list(ENROLLMENT_FEATURES)]
 
 
 def split_dataset(data: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:

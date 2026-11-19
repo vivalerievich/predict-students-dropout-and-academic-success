@@ -1,9 +1,46 @@
 # Predict Students’ Dropout and Academic Success
 
-Predict `Dropout`, `Enrolled`, or `Graduate` using information available at the
-end of enrollment, before first-semester teaching and assessment. The data
-contains 4,424 student records and 36 original predictors.
+[![CI](https://github.com/vivalerievich/predict-students-dropout-and-academic-success/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/vivalerievich/predict-students-dropout-and-academic-success/actions/workflows/ci.yml)
+
+**Task.** Predict `Dropout`, `Enrolled`, or `Graduate` at the end of enrollment,
+before first-semester teaching and assessment.
+
+**Result.** Logistic regression achieved **0.4918 macro F1** on the 885-student
+holdout and identified **141 of 284** students with the `Dropout` outcome.
+
+**Main limitation.** The evaluation covers a random holdout from one
+institution. Performance on later cohorts and at other institutions remains
+unmeasured.
+
+The dataset contains 4,424 student records and 36 original predictors.
 [UCI dataset](https://archive.ics.uci.edu/dataset/697/predict+students+dropout+and+academic+success)
+
+## Run predictions
+
+Clone the code at the model's release tag and install its locked environment.
+
+```bash
+git clone --branch v0.1.0 https://github.com/vivalerievich/predict-students-dropout-and-academic-success.git
+cd predict-students-dropout-and-academic-success
+uv sync --locked --no-dev --python 3.14
+mkdir -p artifacts
+```
+
+Download `predict-students-dropout-and-academic-success.joblib`,
+`sample-input.csv` and `SHA256SUMS.txt` into `artifacts/`. The fitted model
+includes preprocessing and the logistic regression estimator. Use joblib
+models from sources you trust. [GitHub Releases](https://github.com/vivalerievich/predict-students-dropout-and-academic-success/releases/latest)
+
+```bash
+(cd artifacts && shasum -a 256 -c SHA256SUMS.txt)
+uv run --locked --no-dev student-outcomes-predict \
+  --model artifacts/predict-students-dropout-and-academic-success.joblib \
+  --data artifacts/sample-input.csv
+```
+
+Use the synthetic sample as the input schema. The semicolon-separated CSV
+requires the 18 enrollment fields. The CLI emits a JSON array in input row
+order with a predicted label and a probability for each of the three classes.
 
 ## Run the benchmark
 
@@ -21,6 +58,9 @@ uv run student-outcomes-train --data data/data.csv
 The command prints a JSON report with validation scores, holdout metrics by
 class and confusion matrices. The CSV inside the UCI archive uses semicolons
 as delimiters. Keep the archive and CSV under the ignored `data/` directory.
+
+Add `--model-out artifacts/model.joblib` to export the fitted estimator
+selected by mean cross-validation macro F1. Its fit uses the training split.
 
 The default benchmark compares a majority-class baseline, logistic
 regression, a decision tree, random forest and gradient boosting. To reproduce
