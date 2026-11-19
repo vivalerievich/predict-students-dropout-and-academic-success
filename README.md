@@ -127,6 +127,12 @@ uv run pytest
 
 The tests generate small local fixtures and run without downloading the dataset.
 
+The [model release smoke test](https://github.com/vivalerievich/predict-students-dropout-and-academic-success/actions/workflows/model-smoke.yml)
+runs on release publication and can be run manually for a published tag. It
+loads the released model with the tagged code and checks the synthetic example
+against the contract in `tests/release/<tag>/`. Add that tag's
+`schema.json` and `expected-output.json` before publishing a new model release.
+
 Data by Valentim Realinho, Mónica Vieira Martins, Jorge Machado and Luís
 Baptista (2021). [UCI DOI 10.24432/C5MC89](https://doi.org/10.24432/C5MC89).
 The dataset is available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

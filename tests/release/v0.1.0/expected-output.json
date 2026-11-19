@@ -1,0 +1,10 @@
+[
+  {
+    "prediction": "Dropout",
+    "probabilities": {
+      "Dropout": 0.4244848532685716,
+      "Enrolled": 0.1902395024618267,
+      "Graduate": 0.3852756442696017
+    }
+  }
+]

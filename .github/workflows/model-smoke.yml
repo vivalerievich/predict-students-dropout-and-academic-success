@@ -1,0 +1,71 @@
+name: Model release smoke test
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag
+        required: true
+        default: v0.1.0
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify released model
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MODEL_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Check out release checks
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve contract directory
+        run: |
+          git check-ref-format "refs/tags/$MODEL_TAG"
+          test -f "tests/release/$MODEL_TAG/schema.json" || {
+            echo "No model contract for $MODEL_TAG under tests/release."
+            exit 1
+          }
+
+      - name: Check out inference code at the model tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.MODEL_TAG }}
+          path: release-source
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+          python-version: "3.14"
+          cache-dependency-glob: release-source/uv.lock
+
+      - name: Install tagged inference dependencies
+        working-directory: release-source
+        run: uv sync --locked --no-dev
+
+      - name: Download released model and sample
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo "$GITHUB_REPOSITORY" --dir "$RUNNER_TEMP/model-release" \
+            --pattern "${GITHUB_REPOSITORY#*/}.joblib" \
+            --pattern sample-input.csv --pattern SHA256SUMS.txt -- "$MODEL_TAG"
+
+      - name: Verify checksums, schema and predictions
+        env:
+          UV_OFFLINE: "1"
+        run: |
+          python .github/scripts/check_release.py \
+            --contract "tests/release/$MODEL_TAG" \
+            --source release-source \
+            --assets "$RUNNER_TEMP/model-release" \
+            --model "${GITHUB_REPOSITORY#*/}.joblib"

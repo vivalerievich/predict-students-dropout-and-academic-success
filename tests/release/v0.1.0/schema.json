@@ -1,0 +1,33 @@
+{
+  "predict_command": "student-outcomes-predict",
+  "input": {
+    "delimiter": ";",
+    "columns": [
+      "Marital status",
+      "Application mode",
+      "Application order",
+      "Course",
+      "Daytime/evening attendance",
+      "Previous qualification",
+      "Previous qualification (grade)",
+      "Nacionality",
+      "Mother's qualification",
+      "Father's qualification",
+      "Mother's occupation",
+      "Father's occupation",
+      "Admission grade",
+      "Displaced",
+      "Educational special needs",
+      "Gender",
+      "Age at enrollment",
+      "International"
+    ]
+  },
+  "output": {
+    "format": "json",
+    "columns": [
+      "prediction",
+      "probabilities"
+    ]
+  }
+}
